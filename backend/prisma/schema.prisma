@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OwnershipType {
+  GOVERNMENT
+  PRIVATE
+}
+
+enum NaacGrade {
+  A_PLUS_PLUS
+  A_PLUS
+  A
+  B_PLUS_PLUS
+  B_PLUS
+  B
+  C
+  NOT_ACCREDITED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  reviews       Review[]
+  savedColleges SavedCollege[]
+
+  @@map("users")
+}
+
+model College {
+  id                String         @id @default(cuid())
+  name              String
+  slug              String         @unique
+  description       String         @db.Text
+  state             String
+  city              String
+  fees              Decimal        @db.Decimal(12, 2)
+  rating            Float          @default(0)
+  ownershipType     OwnershipType
+  naacGrade         NaacGrade      @default(NOT_ACCREDITED)
+  establishedYear   Int
+  placementAverage  Decimal        @db.Decimal(12, 2)
+  placementHighest  Decimal        @db.Decimal(12, 2)
+  topRecruiters     String[]
+  imageUrl          String?
+  isDeleted         Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  courses           Course[]
+  reviews           Review[]
+  savedByUsers      SavedCollege[]
+
+  @@index([state])
+  @@index([city])
+  @@index([rating])
+  @@index([fees])
+  @@index([ownershipType])
+  @@index([naacGrade])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@map("colleges")
+}
+
+model Course {
+  id         String  @id @default(cuid())
+  collegeId  String
+  courseName String
+  duration   String
+  fees       Decimal @db.Decimal(12, 2)
+  college    College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@map("courses")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  collegeId String
+  userId    String
+  rating    Int
+  comment   String   @db.Text
+  createdAt DateTime @default(now())
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+  @@index([collegeId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model SavedCollege {
+  id        String   @id @default(cuid())
+  userId    String
+  collegeId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+  @@map("saved_colleges")
+}
